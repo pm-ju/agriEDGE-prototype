@@ -1,0 +1,10 @@
+.conda/
+.qodo/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.streamlit/secrets.toml
+
+data/raw/
+models/_tmp_quant/
+results/figures/
