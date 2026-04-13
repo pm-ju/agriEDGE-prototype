@@ -1,4 +1,4 @@
-# 🚜 AgriEdge-Detect
+#  AgriEdge-Detect
 
 **Real-Time Foreign Object Detection for Agricultural Machinery**
 
@@ -12,7 +12,7 @@ Agriculture 4.0. Built as part of an application to the
 [European Summer of Code 2026](https://github.com/european-summer-of-code/esoc2026)
 project on foreign object detection for agricultural machinery.
 
-## 🎯 What It Does
+##  what actually does this app does:
 
 When a forage harvester processes crops, foreign objects (rocks, metal, wood)
 can enter the crop flow and damage the chopper drum blades. This system:
@@ -22,7 +22,7 @@ can enter the crop flow and damage the chopper drum blades. This system:
 3. **Alerts** the operator in real-time with advance warning (avg 45ms before impact peak)
 4. **Runs at the edge** — model exported to ONNX + INT8 quantization for embedded ECU deployment
 
-## 🏗 Architecture
+##  Architecture:
 
 ```
 Vibration Sensor (1kHz)
@@ -38,7 +38,7 @@ Event Merging + Advance Detection Time Calculation
 Real-Time Dashboard Alert + Blade Brake Trigger
 ```
 
-## 🚀 Quick Start
+##  How to get started?
 
     # Clone and install
     git clone https://github.com/pm-ju/agriedge-detect.git
@@ -54,7 +54,7 @@ Real-Time Dashboard Alert + Blade Brake Trigger
     # Launch the dashboard
     streamlit run dashboard/app.py
 
-## 📊 Results
+## Results from the training:
 
 | Model | TPR | FPR | AUC | Avg ADT | Latency | Size |
 |-------|-----|-----|-----|---------|---------|------|
@@ -65,7 +65,7 @@ Real-Time Dashboard Alert + Blade Brake Trigger
 
 *Results on FordA test set. ADT measured on synthetic agricultural data.*
 
-## 📁 Project Structure
+##  Project Structure:
 
 - `src/` — Core ML pipeline (data loading, models, evaluation, edge export)
 - `notebooks/` — Jupyter notebooks for exploration, training, evaluation
@@ -74,7 +74,7 @@ Real-Time Dashboard Alert + Blade Brake Trigger
 - `models/` — Saved trained models (.pt, .onnx)
 - `results/` — Figures and evaluation reports
 
-## 🔬 Relevance to ESoC Project
+##  Relevance to ESoC Project:
 
 This prototype directly demonstrates capabilities required by the project:
 
@@ -87,6 +87,4 @@ This prototype directly demonstrates capabilities required by the project:
 | Embedded constraints (stretch) | ONNX export + INT8 quantization (0.3ms, 48KB) |
 | Explainability (stretch) | Occlusion-based temporal importance analysis |
 
-## 📄 License
 
-Apache 2.0
