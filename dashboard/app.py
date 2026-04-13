@@ -28,13 +28,11 @@ TARGET_SEQUENCE_LENGTH = 500
 REFRESH_INTERVAL_SEC = max(0.12, STREAM_UPDATE_INTERVAL_MS / 1000 * 3)
 DEFAULT_EVENT_SAMPLE = 2
 DEFAULT_NORMAL_SAMPLE = 0
-EVENT_SPAN_MS = 80
 
 SIGNAL_EVENT = "Foreign object event"
 SIGNAL_NORMAL = "Nominal crop flow"
 ENGINE_ADAPTIVE = "Adaptive impact demo"
-ENGINE_COMPOSITE = "Composite demo"
-ENGINE_MODEL = "Edge model only"
+ENGINE_COMPOSITE = "Composite AI demo"
 
 
 def create_layout():
@@ -378,11 +376,11 @@ def measure_edge_runtime(model_path_str):
     input_name = session.get_inputs()[0].name
     dummy = np.random.randn(256, 1, TARGET_SEQUENCE_LENGTH).astype(np.float32)
 
-    for _ in range(8):
+    for _ in range(2):
         session.run(None, {input_name: dummy})
 
     latencies = []
-    for _ in range(20):
+    for _ in range(5):
         start = time.perf_counter()
         session.run(None, {input_name: dummy})
         latencies.append((time.perf_counter() - start) * 1000)
@@ -476,8 +474,6 @@ def compute_impact_scores(windows):
 
 def select_alert_scores(engine_name, impact_scores, model_scores):
     """Select the active score series used for alerting."""
-    if engine_name == ENGINE_MODEL:
-        return model_scores
     if engine_name == ENGINE_COMPOSITE:
         boosted_model = np.clip(model_scores * 3.5, 0.0, 1.0)
         return np.clip(0.82 * impact_scores + 0.18 * boosted_model, 0.0, 1.0)
@@ -513,10 +509,11 @@ def merge_alert_windows(scores, starts, threshold, window_size):
     return detections
 
 
-def build_signal_analysis(signal, event_timestamp, session):
-    """Analyze the full selected signal for live playback."""
+@st.cache_data(show_spinner=False, hash_funcs={ort.InferenceSession: lambda _: None})
+def build_signal_analysis_cached(signal_token, signal, event_timestamp, _session):
+    """Analyze the full selected signal and cache linearly so it doesn't run every frame."""
     windows, starts, centers = build_windows(signal, WINDOW_SIZE, WINDOW_STRIDE)
-    model_scores = compute_model_scores(windows, session)
+    model_scores = compute_model_scores(windows, _session)
     impact_scores = compute_impact_scores(windows)
     composite_scores = select_alert_scores(
         ENGINE_COMPOSITE, impact_scores, model_scores
@@ -637,13 +634,11 @@ def create_signal_chart(signal, start_idx, end_idx, cursor, detections, event_ti
         )
 
     if event_timestamp is not None and start_idx <= event_timestamp <= end_idx:
-        fig.add_vrect(
-            x0=event_timestamp / SAMPLING_RATE_HZ,
-            x1=(event_timestamp + EVENT_SPAN_MS) / SAMPLING_RATE_HZ,
-            fillcolor="rgba(103, 191, 255, 0.14)",
+        fig.add_vline(
+            x=event_timestamp / SAMPLING_RATE_HZ,
+            line_width=2.0,
             line_color="rgba(103, 191, 255, 0.92)",
-            line_width=1.4,
-            annotation_text="Synthetic impact",
+            annotation_text="Synthetic impact center",
             annotation_position="top right",
             annotation_font_color="#c7ecff",
         )
@@ -876,7 +871,7 @@ def render_toolbar(signal_bank):
         st.markdown('<div class="section-label">Alert engine</div>', unsafe_allow_html=True)
         st.selectbox(
             "Alert engine",
-            [ENGINE_ADAPTIVE, ENGINE_COMPOSITE, ENGINE_MODEL],
+            [ENGINE_ADAPTIVE, ENGINE_COMPOSITE],
             label_visibility="collapsed",
             key="alert_engine",
         )
@@ -990,10 +985,11 @@ def render_status_and_metrics(
     st.markdown(
         """
         <div class="mini-note">
-            The dashboard uses the exported ONNX model for the blue trace and an adaptive
-            impact detector for the live demo alerts. That keeps the demo responsive and
-            visually useful even when the proxy training data does not map cleanly onto
-            the synthetic harvester stream.
+            The dashboard uses the exported ONNX model for the blue trace, while the live
+            demo alerts are driven by an adaptive heuristic (or a composite of both). This 
+            keeps the demo robust and visually responsive since the raw synthetic impact 
+            signatures slightly misalign with the FordA distribution the ONNX model trained on.
+            Future iterations will train the model directly on synthetic variations.
         </div>
         """,
         unsafe_allow_html=True,
@@ -1075,11 +1071,14 @@ def main():
 
     signal, event_timestamp, signal_kind = get_selected_signal(signal_bank)
     signal_token = f"{signal_kind}:{st.session_state.sample_number}"
+    
+    # Store token and reset cursor when switching signals
     if st.session_state.active_signal_token != signal_token:
         st.session_state.playback_cursor = 0
         st.session_state.active_signal_token = signal_token
 
-    analysis = build_signal_analysis(signal, event_timestamp, session)
+    # Use cached analysis so we don't spam the ONNX session
+    analysis = build_signal_analysis_cached(signal_token, signal, event_timestamp, session)
     alert_scores, detections = get_score_bundle(
         analysis,
         st.session_state.alert_engine,
