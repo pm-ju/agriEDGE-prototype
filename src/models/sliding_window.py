@@ -14,10 +14,11 @@ This simulates exactly what would run on the embedded agricultural ECU.
 """
 
 import numpy as np
+from sktime.detection.base import BaseDetector
 
 
-class SlidingWindowDetector:
-    """Sliding window event detector wrapping an sktime classifier.
+class SlidingWindowDetector(BaseDetector):
+    """Sliding window event detector extending sktime BaseDetector.
 
     Parameters
     ----------
@@ -31,11 +32,77 @@ class SlidingWindowDetector:
         Probability threshold above which we trigger a detection.
     """
 
+    _tags = {
+        "task": "anomaly_detection",
+        "learning_type": "supervised",
+        "capability:missing_values": False,
+        "capability:multivariate": False,
+    }
+
     def __init__(self, classifier, window_size=50, stride=10, threshold=0.5):
         self.classifier = classifier
         self.window_size = window_size
         self.stride = stride
         self.threshold = threshold
+        
+        # State buffer for continuous stream mode
+        self._stream_buffer = []
+        self._stream_global_time = 0
+        super().__init__()
+
+    def _fit(self, X, y=None):
+        """Fit the detection sequence (no-op as underlying classifier is pre-fitted)."""
+        return self
+
+    def _predict(self, X):
+        """Offline batch detection conforming to sktime signature."""
+        signal = X.values.flatten() if hasattr(X, "values") else np.array(X).flatten()
+        detections, _, _ = self.detect(signal)
+        return detections
+
+    def updateStream(self, new_chunk):
+        """True continuous-time stream processing mode.
+        
+        Ingests asynchronous signal chunks (e.g. from a live queue),
+        evaluates completed windows, and yields overlapping detections.
+        """
+        self._stream_buffer.extend(new_chunk)
+        stream_events = []
+        
+        while len(self._stream_buffer) >= self.window_size:
+            window = np.array(self._stream_buffer[:self.window_size])[np.newaxis, np.newaxis, :]
+            
+            # In an actual embedded setup, this runs the compiled ONNX session
+            proba = self.classifier.predict_proba(window)[0, 1]
+            
+            if proba >= self.threshold:
+                center = self._stream_global_time + self.window_size // 2
+                stream_events.append({
+                    "start": center - self.window_size // 2,
+                    "end": center + self.window_size // 2,
+                    "confidence": float(proba),
+                    "timestamp_ms": center,
+                })
+            
+            self._stream_buffer = self._stream_buffer[self.stride:]
+            self._stream_global_time += self.stride
+            
+        return self._merge_detections_stream(stream_events)
+
+    def _merge_detections_stream(self, events):
+        """Merges adjacent raw stream detections."""
+        if not events:
+            return []
+        merged = [events[0].copy()]
+        for e in events[1:]:
+            last = merged[-1]
+            # If windows overlap or are directly adjacent based on stride
+            if e["start"] <= last["end"] + self.stride:
+                last["end"] = e["end"]
+                last["confidence"] = max(last["confidence"], e["confidence"])
+            else:
+                merged.append(e.copy())
+        return merged
 
     def detect(self, signal):
         """Run detection on a 1D signal.
