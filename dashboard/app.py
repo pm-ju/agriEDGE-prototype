@@ -516,15 +516,12 @@ def render_hero(engine_name, signal_family, runtime_stats, cursor_time, active_s
 
 def render_toolbar(signal_bank):
     """Render the top-line controls."""
-    st.markdown('<div class="toolbar-shell">', unsafe_allow_html=True)
     toolbar_cols = st.columns([1.2, 0.9, 1.1, 0.95, 0.95, 0.55, 0.55, 0.6], gap="medium")
 
     with toolbar_cols[0]:
-        st.markdown('<div class="section-label">Signal source</div>', unsafe_allow_html=True)
         st.selectbox(
             "Signal source",
             [SIGNAL_EVENT, SIGNAL_NORMAL],
-            label_visibility="collapsed",
             key="signal_family",
         )
 
@@ -535,67 +532,53 @@ def render_toolbar(signal_bank):
         st.session_state.sample_number = 1
 
     with toolbar_cols[1]:
-        st.markdown('<div class="section-label">Sample</div>', unsafe_allow_html=True)
         st.number_input(
             "Sample",
             min_value=1,
             max_value=max_samples,
             step=1,
-            label_visibility="collapsed",
             key="sample_number",
         )
 
     with toolbar_cols[2]:
-        st.markdown('<div class="section-label">Alert engine</div>', unsafe_allow_html=True)
         st.selectbox(
             "Alert engine",
             [ENGINE_ADAPTIVE, ENGINE_COMPOSITE],
-            label_visibility="collapsed",
             key="alert_engine",
         )
 
     with toolbar_cols[3]:
-        st.markdown('<div class="section-label">Threshold</div>', unsafe_allow_html=True)
         st.slider(
             "Threshold",
             min_value=0.15,
             max_value=0.95,
             step=0.01,
-            label_visibility="collapsed",
             key="alert_threshold",
         )
 
     with toolbar_cols[4]:
-        st.markdown('<div class="section-label">Speed</div>', unsafe_allow_html=True)
         st.slider(
             "Speed",
             min_value=0.5,
             max_value=3.0,
             step=0.1,
-            label_visibility="collapsed",
             key="playback_speed",
         )
 
     with toolbar_cols[5]:
-        st.markdown('<div class="section-label">Run</div>', unsafe_allow_html=True)
         play_label = "Pause" if st.session_state.playback_running else "Play"
         if st.button(play_label, use_container_width=True):
             st.session_state.playback_running = not st.session_state.playback_running
 
     with toolbar_cols[6]:
-        st.markdown('<div class="section-label">Reset</div>', unsafe_allow_html=True)
         if st.button("Reset", use_container_width=True):
             st.session_state.playback_cursor = 0
 
     with toolbar_cols[7]:
-        st.markdown('<div class="section-label">Loop</div>', unsafe_allow_html=True)
         st.toggle(
             "Loop",
             key="loop_playback",
-            label_visibility="collapsed",
         )
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_status_and_metrics(
