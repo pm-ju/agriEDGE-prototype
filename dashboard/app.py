@@ -36,300 +36,12 @@ ENGINE_COMPOSITE = "Composite AI demo"
 
 
 def create_layout():
-    """Configure the Streamlit page and the custom visual system."""
+    """Configure the Streamlit page."""
     st.set_page_config(
         page_title=f"{APP_TITLE} | Live Monitor",
         page_icon="A",
         layout="wide",
-        initial_sidebar_state="collapsed",
-    )
-
-    st.markdown(
-        """
-        <style>
-            :root {
-                --bg: #0b1010;
-                --panel: rgba(16, 25, 25, 0.88);
-                --panel-border: rgba(212, 232, 185, 0.12);
-                --text: #f3efe1;
-                --muted: #97a79f;
-                --lime: #c8ff63;
-                --mint: #61f0b3;
-                --amber: #ffb454;
-                --red: #ff6a4d;
-                --blue: #67bfff;
-            }
-
-            .stApp {
-                background:
-                    radial-gradient(circle at top left, rgba(200, 255, 99, 0.08), transparent 30%),
-                    radial-gradient(circle at top right, rgba(255, 180, 84, 0.08), transparent 28%),
-                    linear-gradient(180deg, #081011 0%, #101918 48%, #0d1614 100%);
-                color: var(--text);
-            }
-
-            [data-testid="stHeader"] {
-                background: rgba(7, 11, 11, 0.65);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            }
-
-            [data-testid="stSidebar"] {
-                background: linear-gradient(180deg, rgba(15, 22, 22, 0.97), rgba(10, 15, 15, 0.97));
-                border-left: 1px solid rgba(255, 255, 255, 0.06);
-            }
-
-            .block-container {
-                padding-top: 1.2rem;
-                padding-bottom: 2rem;
-                max-width: 1500px;
-            }
-
-            .hero-shell {
-                background:
-                    linear-gradient(135deg, rgba(20, 31, 29, 0.96), rgba(14, 22, 20, 0.96)),
-                    linear-gradient(90deg, rgba(200, 255, 99, 0.08), rgba(255, 180, 84, 0.08));
-                border: 1px solid var(--panel-border);
-                border-radius: 28px;
-                padding: 1.6rem;
-                box-shadow: 0 28px 90px rgba(0, 0, 0, 0.24);
-                overflow: hidden;
-                position: relative;
-            }
-
-            .hero-shell:before {
-                content: "";
-                position: absolute;
-                inset: 0;
-                background:
-                    linear-gradient(120deg, rgba(255, 255, 255, 0.05), transparent 25%),
-                    radial-gradient(circle at 82% 18%, rgba(200, 255, 99, 0.16), transparent 18%);
-                pointer-events: none;
-            }
-
-            .hero-kicker,
-            .section-label,
-            [data-testid="stMetricLabel"] {
-                font-family: "Trebuchet MS", "Segoe UI Variable", sans-serif;
-                text-transform: uppercase;
-                color: var(--muted);
-                letter-spacing: 0.13em;
-            }
-
-            .hero-kicker {
-                color: var(--amber);
-                font-size: 0.76rem;
-                margin-bottom: 0.8rem;
-            }
-
-            .hero-title,
-            .panel-title,
-            .hero-stat-value,
-            .kpi-value,
-            [data-testid="stMetricValue"] {
-                font-family: "Georgia", "Palatino Linotype", serif;
-                color: var(--text);
-            }
-
-            .hero-title {
-                font-size: 3.35rem;
-                line-height: 0.96;
-                margin: 0;
-            }
-
-            .hero-accent {
-                color: var(--lime);
-            }
-
-            .hero-copy,
-            .panel-copy,
-            .mini-note,
-            .log-entry,
-            .footer-note {
-                font-family: "Trebuchet MS", "Segoe UI Variable", sans-serif;
-            }
-
-            .hero-copy {
-                color: #d4ddd7;
-                font-size: 1.08rem;
-                max-width: 46rem;
-                margin: 0.95rem 0 1.2rem 0;
-            }
-
-            .hero-badges {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.55rem;
-            }
-
-            .hero-badge {
-                display: inline-flex;
-                align-items: center;
-                padding: 0.44rem 0.72rem;
-                border-radius: 999px;
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                font-family: "Trebuchet MS", "Segoe UI Variable", sans-serif;
-                font-size: 0.9rem;
-                color: var(--text);
-            }
-
-            .hero-rail {
-                display: grid;
-                gap: 0.8rem;
-                margin-top: 0.15rem;
-            }
-
-            .hero-stat,
-            .kpi-card,
-            [data-testid="stMetric"],
-            .log-entry {
-                background: rgba(255, 255, 255, 0.04);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-            }
-
-            .hero-stat {
-                border-radius: 22px;
-                padding: 0.9rem 1rem;
-            }
-
-            .hero-stat-label,
-            .kpi-label {
-                font-family: "Trebuchet MS", "Segoe UI Variable", sans-serif;
-                color: var(--muted);
-                text-transform: uppercase;
-                letter-spacing: 0.13em;
-                font-size: 0.68rem;
-                margin-bottom: 0.34rem;
-            }
-
-            .hero-stat-value {
-                font-size: 1.75rem;
-                line-height: 1.05;
-            }
-
-            .toolbar-shell,
-            .panel-shell {
-                background: rgba(12, 20, 19, 0.84);
-                border: 1px solid rgba(255, 255, 255, 0.06);
-                border-radius: 24px;
-            }
-
-            .toolbar-shell {
-                margin-top: 1rem;
-                padding: 1rem 1rem 0.2rem 1rem;
-            }
-
-            .section-label {
-                font-size: 0.72rem;
-                margin-bottom: 0.3rem;
-            }
-
-            .panel-shell {
-                padding: 0.8rem 1rem 1rem 1rem;
-                box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
-                height: 100%;
-            }
-
-            .panel-title {
-                font-size: 1.5rem;
-                margin-bottom: 0.15rem;
-            }
-
-            .panel-copy {
-                color: var(--muted);
-                font-size: 0.92rem;
-                margin-bottom: 0.9rem;
-            }
-
-            .status-banner {
-                padding: 1rem 1.1rem;
-                border-radius: 22px;
-                border: 1px solid rgba(255, 255, 255, 0.06);
-                font-family: "Trebuchet MS", "Segoe UI Variable", sans-serif;
-                font-weight: 700;
-                font-size: 1rem;
-                margin-bottom: 0.95rem;
-            }
-
-            .status-ok {
-                background: linear-gradient(90deg, rgba(36, 72, 54, 0.92), rgba(17, 39, 31, 0.92));
-                color: #dfffe5;
-                box-shadow: 0 0 0 1px rgba(97, 240, 179, 0.12) inset;
-            }
-
-            .status-alert {
-                background: linear-gradient(90deg, rgba(104, 30, 20, 0.96), rgba(70, 16, 10, 0.96));
-                color: #ffe7df;
-                box-shadow: 0 0 0 1px rgba(255, 106, 77, 0.18) inset, 0 0 35px rgba(255, 106, 77, 0.14);
-            }
-
-            .kpi-grid {
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 0.75rem;
-                margin-bottom: 1rem;
-            }
-
-            .kpi-card {
-                border-radius: 20px;
-                padding: 0.9rem 0.95rem;
-            }
-
-            .kpi-value {
-                font-size: 1.55rem;
-                line-height: 1.05;
-            }
-
-            .mini-note {
-                color: #c3d2cc;
-                font-size: 0.92rem;
-                padding: 0.92rem 1rem;
-                border-radius: 18px;
-                background: linear-gradient(135deg, rgba(28, 43, 56, 0.95), rgba(18, 30, 40, 0.95));
-                border: 1px solid rgba(103, 191, 255, 0.12);
-                margin-top: 0.85rem;
-            }
-
-            .log-entry {
-                padding: 0.7rem 0.8rem;
-                border-radius: 16px;
-                margin-bottom: 0.55rem;
-            }
-
-            .log-title {
-                color: var(--text);
-                font-weight: 700;
-                margin-bottom: 0.18rem;
-            }
-
-            .log-copy,
-            .footer-note {
-                color: var(--muted);
-                font-size: 0.9rem;
-            }
-
-            .stButton button {
-                border-radius: 999px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                background: linear-gradient(135deg, rgba(24, 32, 31, 0.98), rgba(14, 20, 20, 0.98));
-                color: var(--text);
-                font-family: "Trebuchet MS", "Segoe UI Variable", sans-serif;
-                font-weight: 700;
-                min-height: 2.85rem;
-            }
-
-            .stButton button:hover {
-                border-color: rgba(200, 255, 99, 0.34);
-                color: var(--lime);
-            }
-
-            [data-testid="stMetric"] {
-                border-radius: 18px;
-                padding: 0.8rem 0.95rem;
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
+        initial_sidebar_state="expanded",
     )
 
 
@@ -787,53 +499,19 @@ def format_log_entries(detections, cursor, event_timestamp):
 
 def render_hero(engine_name, signal_family, runtime_stats, cursor_time, active_score):
     """Render the hero section at the top of the page."""
-    hero_left, hero_right = st.columns([1.6, 0.95], gap="large")
-
-    with hero_left:
-        st.markdown(
-            f"""
-            <div class="hero-shell">
-                <div class="hero-kicker">Predictive sensor cockpit</div>
-                <h1 class="hero-title">
-                    {APP_TITLE}<br>
-                    <span class="hero-accent">Harvester Control Room</span>
-                </h1>
-                <p class="hero-copy">
-                    A live monitor for synthetic harvester vibration streams. It replays a
-                    10-second signal, scores each moving window, and raises alerts when the
-                    incoming pattern looks like a foreign-object impact.
-                </p>
-                <div class="hero-badges">
-                    <span class="hero-badge">1 kHz feed</span>
-                    <span class="hero-badge">{engine_name}</span>
-                    <span class="hero-badge">{signal_family}</span>
-                    <span class="hero-badge">{runtime_stats['engine_name']}</span>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with hero_right:
-        st.markdown(
-            f"""
-            <div class="hero-rail">
-                <div class="hero-stat">
-                    <div class="hero-stat-label">Playback</div>
-                    <div class="hero-stat-value">{cursor_time:.2f}s</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-label">Active score</div>
-                    <div class="hero-stat-value">{active_score:.2f}</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-label">Edge latency</div>
-                    <div class="hero-stat-value">{runtime_stats['single_window_ms']:.3f} ms</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.header(f"{APP_TITLE} (Prototype)", anchor=False)
+    st.write(
+        "A live monitor for synthetic harvester vibration streams. It replays a "
+        "10-second signal, scores each moving window, and raises alerts when the "
+        "incoming pattern looks like a foreign-object impact."
+    )
+    
+    cols = st.columns(4)
+    cols[0].metric("Format", "1 kHz feed")
+    cols[1].metric("Playback cursor", f"{cursor_time:.2f}s")
+    cols[2].metric("Active alert score", f"{active_score:.2f}")
+    cols[3].metric("Edge latency", f"{runtime_stats['single_window_ms']:.3f} ms")
+    st.divider()
 
 
 def render_toolbar(signal_bank):
@@ -933,98 +611,43 @@ def render_status_and_metrics(
     """Render the right-hand status rail."""
     lead_time = compute_lead_time_ms(active_alert, event_timestamp)
     if active_alert is not None:
-        status_class = "status-banner status-alert"
         lead_copy = "lead unavailable" if lead_time is None else f"{lead_time:.0f} ms lead"
-        banner_copy = f"ALERT ACTIVE | confidence {active_alert['confidence']:.0%} | {lead_copy}"
+        st.error(f"**ALERT ACTIVE** | confidence {active_alert['confidence']:.0%} | {lead_copy}", icon="🚨")
     else:
-        status_class = "status-banner status-ok"
         banner_copy = (
             "MONITORING | waiting for the injected impact to enter the live window"
             if signal_kind == "event"
             else "MONITORING | nominal crop-flow simulation"
         )
-
-    st.markdown(f'<div class="{status_class}">{banner_copy}</div>', unsafe_allow_html=True)
+        st.success(f"**{banner_copy}**", icon="✅")
 
     total_alerts_seen = len([d for d in detections if d["start"] <= cursor])
-    cursor_time = cursor / SAMPLING_RATE_HZ
     event_time_copy = "-" if event_timestamp is None else f"{event_timestamp / SAMPLING_RATE_HZ:.2f}s"
-
-    st.markdown(
-        f"""
-        <div class="kpi-grid">
-            <div class="kpi-card">
-                <div class="kpi-label">Cursor</div>
-                <div class="kpi-value">{cursor_time:.2f}s</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Alerts seen</div>
-                <div class="kpi-value">{total_alerts_seen}</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Alert score</div>
-                <div class="kpi-value">{alert_score:.2f}</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Ground truth impact</div>
-                <div class="kpi-value">{event_time_copy}</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
     metric_cols = st.columns(3)
     metric_cols[0].metric("ONNX model p(event)", f"{model_score:.2f}")
     metric_cols[1].metric("Impact score", f"{impact_score:.2f}")
-    metric_cols[2].metric(
-        "Lead time",
-        "-" if lead_time is None else f"{lead_time:.0f} ms",
-    )
+    metric_cols[2].metric("Lead time", "-" if lead_time is None else f"{lead_time:.0f} ms")
 
-    st.markdown(
-        """
-        <div class="mini-note">
-            The dashboard uses the exported ONNX model for the blue trace, while the live
-            demo alerts are driven by an adaptive heuristic (or a composite of both). This 
-            keeps the demo robust and visually responsive since the raw synthetic impact 
-            signatures slightly misalign with the FordA distribution the ONNX model trained on.
-            Future iterations will train the model directly on synthetic variations.
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.info(
+        "The dashboard uses the exported ONNX model for the blue trace, while the live "
+        "demo alerts are driven by an adaptive heuristic (or a composite of both). This "
+        "keeps the demo robust and visually responsive since the raw synthetic impact "
+        "signatures slightly misalign with the FordA distribution the ONNX model trained on."
     )
 
 
 def render_detection_log(entries):
     """Render the recent detection log."""
-    st.markdown('<div class="panel-title">Recent detections</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="panel-copy">Latest alerts that have crossed the chosen threshold.</div>',
-        unsafe_allow_html=True,
-    )
+    st.subheader("Recent detections")
+    st.write("Latest alerts that have crossed the chosen threshold.")
+    
     if not entries:
-        st.markdown(
-            """
-            <div class="log-entry">
-                <div class="log-title">No alert yet</div>
-                <div class="log-copy">The live cursor has not crossed a detection window.</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.write("*No alert yet. The live cursor has not crossed a detection window.*")
         return
 
     for entry in entries:
-        st.markdown(
-            f"""
-            <div class="log-entry">
-                <div class="log-title">{entry['title']}</div>
-                <div class="log-copy">{entry['copy']}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.write(f"- **{entry['title']}**: {entry['copy']}")
 
 
 def render_sidebar(runtime_stats, signal_family, engine_name, event_timestamp):
@@ -1106,12 +729,8 @@ def main():
     content_left, content_right = st.columns([1.65, 0.95], gap="large")
 
     with content_left:
-        st.markdown('<div class="panel-shell">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-title">Live vibration feed</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="panel-copy">The amber cursor advances through the selected 10-second stream while the chart scrolls over the latest 5 seconds.</div>',
-            unsafe_allow_html=True,
-        )
+        st.subheader("Live vibration feed")
+        st.write("The amber cursor advances through the stream while the chart scrolls over the latest 5 seconds.")
         signal_fig = create_signal_chart(
             analysis["signal"],
             start_idx,
@@ -1120,17 +739,10 @@ def main():
             detections,
             event_timestamp,
         )
-        st.plotly_chart(signal_fig, use_container_width=True, config={"displayModeBar": False})
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.plotly_chart(signal_fig, use_container_width=True)
 
-        st.markdown('<div style="height: 0.9rem;"></div>', unsafe_allow_html=True)
-
-        st.markdown('<div class="panel-shell">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-title">Detection signals</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="panel-copy">Amber drives the live alert banner. Red shows the adaptive impact signal. Blue shows the exported ONNX model probability.</div>',
-            unsafe_allow_html=True,
-        )
+        st.subheader("Detection signals")
+        st.write("Amber: Demo Alert | Red: Adaptive | Blue: ONNX probability")
         score_fig = create_score_chart(
             analysis,
             start_idx,
@@ -1140,11 +752,9 @@ def main():
             st.session_state.alert_threshold,
             event_timestamp,
         )
-        st.plotly_chart(score_fig, use_container_width=True, config={"displayModeBar": False})
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.plotly_chart(score_fig, use_container_width=True)
 
     with content_right:
-        st.markdown('<div class="panel-shell">', unsafe_allow_html=True)
         render_status_and_metrics(
             signal_kind,
             cursor,
@@ -1155,12 +765,8 @@ def main():
             detections,
             active_alert,
         )
+        st.divider()
         render_detection_log(detection_log)
-        st.markdown(
-            '<div class="footer-note">Try switching between an event stream and a nominal stream, then change the alert engine to compare the live behavior.</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
 
     render_sidebar(
         runtime_stats,
