@@ -22,7 +22,7 @@ from src.config import (  # noqa: E402
 )
 
 
-APP_TITLE = "agriEDGE prototype"
+APP_TITLE = "ESOC with focus in Sktime modules Prototype"
 TARGET_SEQUENCE_LENGTH = 500
 REFRESH_INTERVAL_SEC = max(0.15, STREAM_UPDATE_INTERVAL_MS / 1000 * 4)
 
