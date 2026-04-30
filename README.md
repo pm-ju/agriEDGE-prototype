@@ -1,4 +1,4 @@
-# agriEDGE prototype
+# ESOC Prototype project
 
 A Streamlit prototype for reviewing sliding-window event detection on synthetic harvester vibration data.
 
@@ -42,25 +42,3 @@ If the ONNX model is missing, export it from the notebook:
 ```bash
 jupyter notebook notebooks/05_edge_export.ipynb
 ```
-
-## Project Structure
-
-- `dashboard/` Streamlit review app
-- `src/` model builders, detector logic, evaluation helpers, and ONNX export
-- `data/synthetic/` stored synthetic signals and the generator script
-- `models/` exported model artifacts used by the dashboard
-- `notebooks/` exploration, training, evaluation, explainability, and export
-
-## Notes
-
-- This is a prototype, not a production detector.
-- The classifier is trained on FordA as proxy data, not on field recordings from a harvester.
-- The dashboard replays stored 10 second samples; it is not connected to a live sensor feed.
-- The event marker shown in the dashboard is the injected event start saved with the synthetic sample.
-
-## Future Work
-
-- Train on field data instead of the FordA proxy dataset
-- Connect the dashboard to the chunked stream detector path
-- Add tests around window scoring and event merging
-- Compare the batch dashboard path with the stateful stream API
