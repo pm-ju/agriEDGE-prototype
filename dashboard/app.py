@@ -1,5 +1,3 @@
-"""Dashboard for reviewing detector output on synthetic vibration signals."""
-
 import sys
 import time
 from pathlib import Path
@@ -22,7 +20,7 @@ from src.config import (  # noqa: E402
 )
 
 
-APP_TITLE = "ESOC with focus in Sktime modules Prototype"
+APP_TITLE = "agriEDGE app"
 TARGET_SEQUENCE_LENGTH = 500
 REFRESH_INTERVAL_SEC = max(0.15, STREAM_UPDATE_INTERVAL_MS / 1000 * 4)
 
@@ -33,68 +31,17 @@ MODE_BLEND = "Heuristic + ONNX"
 
 
 def configure_page():
-    """Configure the page and apply a small visual layer."""
+    """Configure the Streamlit page."""
     st.set_page_config(
         page_title=APP_TITLE,
         layout="wide",
         initial_sidebar_state="expanded",
     )
-    st.markdown(
-        """
-        <style>
-        .stApp {
-            background: #f6f5f1;
-            color: #1f2a23;
-        }
-        .block-container {
-            max-width: 1380px;
-            padding-top: 1.2rem;
-            padding-bottom: 1.2rem;
-        }
-        [data-testid="stSidebar"] {
-            background: #ece8df;
-            border-right: 1px solid #d9d3c7;
-        }
-        [data-testid="stMetric"] {
-            background: #fffdfa;
-            border: 1px solid #dcd6ca;
-            border-radius: 8px;
-            padding: 0.75rem 0.9rem;
-        }
-        div[data-testid="stMetricLabel"] {
-            color: #56665c;
-        }
-        div[data-testid="stMetricValue"] {
-            color: #1f2a23;
-        }
-        .app-note {
-            background: #fffdfa;
-            border: 1px solid #dcd6ca;
-            border-left: 4px solid #6f8b77;
-            border-radius: 8px;
-            padding: 0.85rem 1rem;
-            margin-bottom: 0.8rem;
-        }
-        .app-note strong {
-            display: block;
-            margin-bottom: 0.25rem;
-        }
-        h1, h2, h3 {
-            color: #1f2a23;
-        }
-        .stButton > button {
-            border-radius: 8px;
-            border: 1px solid #c7c1b5;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
 
 
 @st.cache_data(show_spinner=False)
 def load_signal_bank():
-    """Load the stored synthetic signals used by the dashboard."""
+    """Load the saved synthetic signals."""
     return {
         "normal": np.load(SYNTHETIC_DATA_DIR / "normal_samples.npy").astype(np.float32),
         "event": np.load(SYNTHETIC_DATA_DIR / "event_samples.npy").astype(np.float32),
@@ -106,7 +53,7 @@ def load_signal_bank():
 
 @st.cache_resource(show_spinner=False)
 def load_edge_runtime():
-    """Load the exported ONNX model when it is present."""
+    """Load the exported ONNX model if it exists."""
     candidate_paths = [
         MODELS_DIR / "detector_quantized.onnx",
         MODELS_DIR / "detector.onnx",
@@ -124,12 +71,11 @@ def load_edge_runtime():
 
 @st.cache_data(show_spinner=False)
 def measure_edge_runtime(model_path_str):
-    """Measure rough ONNX inference stats once per model file."""
+    """Measure rough ONNX runtime once per model file."""
     if model_path_str is None:
         return {
             "model_file": "not loaded",
             "model_size_kb": None,
-            "batch_latency_ms": None,
             "single_window_ms": None,
         }
 
@@ -144,23 +90,22 @@ def measure_edge_runtime(model_path_str):
     for _ in range(2):
         session.run(None, {input_name: dummy})
 
-    latencies = []
+    times = []
     for _ in range(5):
         start = time.perf_counter()
         session.run(None, {input_name: dummy})
-        latencies.append((time.perf_counter() - start) * 1000)
+        times.append((time.perf_counter() - start) * 1000)
 
-    batch_latency_ms = float(np.mean(latencies))
+    batch_time = float(np.mean(times))
     return {
         "model_file": model_path.name,
         "model_size_kb": model_path.stat().st_size / 1024,
-        "batch_latency_ms": batch_latency_ms,
-        "single_window_ms": batch_latency_ms / dummy.shape[0],
+        "single_window_ms": batch_time / dummy.shape[0],
     }
 
 
 def initialize_state():
-    """Initialize dashboard state."""
+    """Initialize session state."""
     defaults = {
         "signal_source": SOURCE_EVENT,
         "sample_number": 1,
@@ -177,12 +122,12 @@ def initialize_state():
 
 
 def selected_source_key():
-    """Map the selected UI label to a signal-bank key."""
+    """Map the UI selection to the stored key."""
     return "event" if st.session_state.signal_source == SOURCE_EVENT else "normal"
 
 
 def sample_count_for_source(signal_bank):
-    """Return the number of samples available for the current source."""
+    """Return the number of saved samples for the current source."""
     return int(signal_bank[selected_source_key()].shape[0])
 
 
@@ -196,7 +141,7 @@ def clamp_sample_number(signal_bank):
 
 
 def get_selected_signal(signal_bank):
-    """Return the selected signal and the stored event start when present."""
+    """Return the selected signal and event start if present."""
     source_key = selected_source_key()
     sample_index = st.session_state.sample_number - 1
 
@@ -210,7 +155,7 @@ def get_selected_signal(signal_bank):
 
 
 def build_windows(signal, window_size, stride):
-    """Create overlapping fixed-width windows."""
+    """Create overlapping windows."""
     windows = np.lib.stride_tricks.sliding_window_view(signal, window_size)[::stride]
     starts = np.arange(0, len(signal) - window_size + 1, stride)
     centers = starts + window_size // 2
@@ -228,7 +173,7 @@ def resample_windows(windows, target_length):
 
 
 def softmax(logits):
-    """Compute softmax probabilities from ONNX logits."""
+    """Compute softmax from ONNX logits."""
     shifted = logits - logits.max(axis=1, keepdims=True)
     exp_logits = np.exp(shifted)
     return exp_logits / exp_logits.sum(axis=1, keepdims=True)
@@ -246,7 +191,7 @@ def compute_model_scores(windows, session):
 
 
 def compute_spike_scores(windows):
-    """Compute a simple spike score from local slope changes."""
+    """Compute a simple spike score."""
     raw_spike = np.max(np.abs(np.diff(windows, axis=1)), axis=1)
     baseline_count = min(len(raw_spike), max(40, int(1000 / WINDOW_STRIDE)))
     baseline = raw_spike[:baseline_count]
@@ -258,7 +203,7 @@ def compute_spike_scores(windows):
 
 
 def select_decision_scores(score_mode, spike_scores, model_scores, model_loaded):
-    """Select the score series used for thresholding."""
+    """Select the score used for thresholding."""
     if score_mode == MODE_BLEND and model_loaded:
         boosted_model = np.clip(model_scores * 3.5, 0.0, 1.0)
         return np.clip(0.82 * spike_scores + 0.18 * boosted_model, 0.0, 1.0)
@@ -266,7 +211,7 @@ def select_decision_scores(score_mode, spike_scores, model_scores, model_loaded)
 
 
 def merge_detections(scores, starts, threshold, window_size):
-    """Merge contiguous windows above threshold into detection regions."""
+    """Merge contiguous windows above threshold into regions."""
     detected = scores >= threshold
     detections = []
     i = 0
@@ -296,7 +241,7 @@ def merge_detections(scores, starts, threshold, window_size):
 
 @st.cache_data(show_spinner=False, hash_funcs={ort.InferenceSession: lambda _: None})
 def build_signal_analysis_cached(signal_token, signal, _session):
-    """Analyze the selected signal once and reuse the result across reruns."""
+    """Analyze the selected signal once and reuse the result."""
     windows, starts, centers = build_windows(signal, WINDOW_SIZE, WINDOW_STRIDE)
     model_scores = compute_model_scores(windows, _session)
     spike_scores = compute_spike_scores(windows)
@@ -311,7 +256,7 @@ def build_signal_analysis_cached(signal_token, signal, _session):
 
 
 def get_score_bundle(analysis, score_mode, threshold, model_loaded):
-    """Return the active score series and merged detections."""
+    """Return the active score and merged detections."""
     active_scores = select_decision_scores(
         score_mode,
         analysis["spike_scores"],
@@ -328,7 +273,7 @@ def get_score_bundle(analysis, score_mode, threshold, model_loaded):
 
 
 def move_cursor(sample_length, step):
-    """Move the playback cursor and handle looping."""
+    """Move the playback cursor."""
     next_cursor = st.session_state.playback_cursor + step
     if next_cursor < sample_length:
         st.session_state.playback_cursor = next_cursor
@@ -342,7 +287,7 @@ def move_cursor(sample_length, step):
 
 
 def advance_playback(sample_length):
-    """Advance the playback cursor when auto-play is enabled."""
+    """Advance playback when auto-play is enabled."""
     if not st.session_state.playback_running:
         return
 
@@ -354,12 +299,12 @@ def advance_playback(sample_length):
 
 
 def step_once(sample_length):
-    """Move the cursor forward by one detector stride."""
+    """Move the cursor by one stride."""
     move_cursor(sample_length, WINDOW_STRIDE)
 
 
 def get_visible_range(sample_length, cursor):
-    """Compute the visible time range for the charts."""
+    """Compute the visible range for charts."""
     visible_points = int(CHART_VISIBLE_WINDOW_SEC * SAMPLING_RATE_HZ)
     end_idx = min(sample_length, max(cursor + 1, visible_points))
     start_idx = max(0, end_idx - visible_points)
@@ -367,14 +312,14 @@ def get_visible_range(sample_length, cursor):
 
 
 def get_current_window_score(centers, scores, cursor):
-    """Return the score associated with the current cursor position."""
+    """Return the score for the current cursor."""
     idx = np.searchsorted(centers, cursor, side="right") - 1
     idx = int(np.clip(idx, 0, len(scores) - 1))
     return float(scores[idx])
 
 
 def get_active_alert(detections, cursor):
-    """Return the detection region currently under the cursor."""
+    """Return the current detection if there is one."""
     for detection in detections:
         if detection["start"] <= cursor <= detection["end"]:
             return detection
@@ -382,14 +327,14 @@ def get_active_alert(detections, cursor):
 
 
 def compute_event_offset_ms(detection, event_start):
-    """Measure the offset between a detection start and the injected event start."""
+    """Measure event offset for display."""
     if detection is None or event_start is None:
         return None
     return float(event_start - detection["start"])
 
 
 def format_event_offset(offset_ms):
-    """Format a signed event offset for display."""
+    """Format event offset text."""
     if offset_ms is None:
         return "-"
     if offset_ms > 0:
@@ -400,10 +345,9 @@ def format_event_offset(offset_ms):
 
 
 def create_signal_chart(signal, start_idx, end_idx, cursor, detections, event_start):
-    """Create the signal chart for the visible window."""
+    """Create a basic signal chart."""
     visible_signal = signal[start_idx:end_idx]
     x_seconds = np.arange(start_idx, end_idx) / SAMPLING_RATE_HZ
-    y_padding = max(0.06, float(np.std(visible_signal)) * 0.45)
 
     fig = go.Figure()
     fig.add_trace(
@@ -411,9 +355,7 @@ def create_signal_chart(signal, start_idx, end_idx, cursor, detections, event_st
             x=x_seconds,
             y=visible_signal,
             mode="lines",
-            name="Signal",
-            line=dict(color="#486555", width=1.9),
-            hovertemplate="t=%{x:.3f}s<br>amp=%{y:.3f}<extra></extra>",
+            name="signal",
         )
     )
 
@@ -423,47 +365,18 @@ def create_signal_chart(signal, start_idx, end_idx, cursor, detections, event_st
         fig.add_vrect(
             x0=max(detection["start"], start_idx) / SAMPLING_RATE_HZ,
             x1=min(detection["end"], end_idx) / SAMPLING_RATE_HZ,
-            fillcolor="rgba(111, 139, 119, 0.16)",
+            fillcolor="rgba(255, 0, 0, 0.15)",
             line_width=0,
         )
 
     if event_start is not None and start_idx <= event_start <= end_idx:
-        fig.add_vline(
-            x=event_start / SAMPLING_RATE_HZ,
-            line_width=1.4,
-            line_dash="dot",
-            line_color="#7a8f99",
-        )
+        fig.add_vline(x=event_start / SAMPLING_RATE_HZ, line_dash="dot")
 
-    fig.add_vline(
-        x=cursor / SAMPLING_RATE_HZ,
-        line_width=1.6,
-        line_dash="dash",
-        line_color="#2c4a3c",
-    )
-
+    fig.add_vline(x=cursor / SAMPLING_RATE_HZ, line_dash="dash")
     fig.update_layout(
-        paper_bgcolor="#fffdfa",
-        plot_bgcolor="#fffdfa",
-        margin=dict(l=24, r=18, t=16, b=18),
-        height=390,
-        showlegend=False,
-        font=dict(color="#1f2a23"),
-        xaxis=dict(
-            title="Time (s)",
-            range=[start_idx / SAMPLING_RATE_HZ, end_idx / SAMPLING_RATE_HZ],
-            gridcolor="rgba(31, 42, 35, 0.08)",
-            zeroline=False,
-        ),
-        yaxis=dict(
-            title="Amplitude",
-            range=[
-                float(visible_signal.min() - y_padding),
-                float(visible_signal.max() + y_padding),
-            ],
-            gridcolor="rgba(31, 42, 35, 0.08)",
-            zeroline=False,
-        ),
+        height=320,
+        xaxis_title="Time (s)",
+        yaxis_title="Amplitude",
     )
     return fig
 
@@ -476,18 +389,13 @@ def create_score_chart(
     alert_scores,
     threshold,
     event_start,
-    score_mode,
     model_loaded,
 ):
-    """Create the score chart under the signal trace."""
+    """Create a basic score chart."""
     mask = (analysis["centers"] >= start_idx) & (analysis["centers"] <= end_idx)
     x_seconds = analysis["centers"][mask] / SAMPLING_RATE_HZ
     model_scores = analysis["model_scores"][mask]
     alert_slice = alert_scores[mask]
-
-    score_label = "Decision score"
-    if score_mode == MODE_BLEND and model_loaded:
-        score_label = "Decision score (blend)"
 
     fig = go.Figure()
     fig.add_trace(
@@ -495,8 +403,7 @@ def create_score_chart(
             x=x_seconds,
             y=alert_slice,
             mode="lines",
-            name=score_label,
-            line=dict(color="#486555", width=2.4),
+            name="decision score",
         )
     )
     if model_loaded:
@@ -505,119 +412,64 @@ def create_score_chart(
                 x=x_seconds,
                 y=model_scores,
                 mode="lines",
-                name="ONNX p(event)",
-                line=dict(color="#7a8f99", width=1.6),
+                name="onnx score",
             )
         )
 
-    fig.add_hline(
-        y=threshold,
-        line_dash="dash",
-        line_color="#8c8475",
-        line_width=1.1,
-        annotation_text=f"threshold {threshold:.2f}",
-        annotation_font_color="#625b4f",
-    )
-    fig.add_vline(
-        x=cursor / SAMPLING_RATE_HZ,
-        line_width=1.6,
-        line_dash="dash",
-        line_color="#2c4a3c",
-    )
+    fig.add_hline(y=threshold, line_dash="dash")
+    fig.add_vline(x=cursor / SAMPLING_RATE_HZ, line_dash="dash")
     if event_start is not None and start_idx <= event_start <= end_idx:
-        fig.add_vline(
-            x=event_start / SAMPLING_RATE_HZ,
-            line_width=1.2,
-            line_dash="dot",
-            line_color="#7a8f99",
-        )
+        fig.add_vline(x=event_start / SAMPLING_RATE_HZ, line_dash="dot")
 
     fig.update_layout(
-        paper_bgcolor="#fffdfa",
-        plot_bgcolor="#fffdfa",
-        margin=dict(l=24, r=18, t=16, b=12),
-        height=255,
-        showlegend=model_loaded,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.0),
-        font=dict(color="#1f2a23"),
-        xaxis=dict(
-            title="Time (s)",
-            range=[start_idx / SAMPLING_RATE_HZ, end_idx / SAMPLING_RATE_HZ],
-            gridcolor="rgba(31, 42, 35, 0.08)",
-            zeroline=False,
-        ),
-        yaxis=dict(
-            title="Score",
-            range=[0.0, 1.05],
-            gridcolor="rgba(31, 42, 35, 0.08)",
-            zeroline=False,
-        ),
+        height=280,
+        xaxis_title="Time (s)",
+        yaxis_title="Score",
     )
     return fig
 
 
-def format_log_entries(detections, cursor, event_start):
-    """Build a short detection log."""
+def build_detection_rows(detections, cursor, event_start):
+    """Build simple rows for display."""
     seen = [d for d in detections if d["start"] <= cursor]
-    if not seen:
-        return []
-
-    entries = []
-    for detection in seen[-5:][::-1]:
-        line = (
-            f"{detection['start'] / SAMPLING_RATE_HZ:.3f}s to "
-            f"{detection['end'] / SAMPLING_RATE_HZ:.3f}s | "
-            f"score {detection['confidence']:.2f}"
+    rows = []
+    for detection in seen:
+        rows.append(
+            {
+                "start_s": round(detection["start"] / SAMPLING_RATE_HZ, 3),
+                "end_s": round(detection["end"] / SAMPLING_RATE_HZ, 3),
+                "score": round(detection["confidence"], 2),
+                "event_offset": format_event_offset(
+                    compute_event_offset_ms(detection, event_start)
+                ),
+            }
         )
-        if event_start is not None:
-            offset = compute_event_offset_ms(detection, event_start)
-            line = f"{line} | {format_event_offset(offset)}"
-        entries.append(line)
-    return entries
+    return rows
 
 
-def render_header(model_loaded):
-    """Render the title block."""
-    st.title(APP_TITLE)
-    st.caption("Synthetic vibration replay for reviewing the sliding-window detector.")
-    st.markdown(
-        """
-        <div class="app-note">
-            <strong>Scope</strong>
-            This page replays stored 10 second samples, scores each fixed window,
-            and marks the regions that cross the current threshold.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if not model_loaded:
-        st.markdown(
-            """
-            <div class="app-note">
-                <strong>Runtime</strong>
-                No ONNX model was found in <code>models/</code>. The dashboard is still
-                usable with the heuristic score, but the ONNX comparison trace is disabled.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-
-def render_sidebar(signal_bank, runtime_stats, model_loaded):
-    """Render the sidebar controls and notes."""
+def render_sidebar(signal_bank, runtime_stats):
+    """Render simple sidebar controls."""
     with st.sidebar:
-        st.subheader("Controls")
-        st.radio("Signal", [SOURCE_EVENT, SOURCE_NORMAL], key="signal_source")
+        st.header("Controls")
+        st.selectbox(
+            "Signal source",
+            [SOURCE_EVENT, SOURCE_NORMAL],
+            key="signal_source",
+        )
 
         clamp_sample_number(signal_bank)
         st.number_input(
-            "Sample",
+            "Sample number",
             min_value=1,
             max_value=sample_count_for_source(signal_bank),
             step=1,
             key="sample_number",
         )
-        st.radio("Scoring path", [MODE_BLEND, MODE_HEURISTIC], key="score_mode")
+        st.selectbox(
+            "Score mode",
+            [MODE_BLEND, MODE_HEURISTIC],
+            key="score_mode",
+        )
         st.slider(
             "Threshold",
             min_value=0.15,
@@ -634,126 +486,36 @@ def render_sidebar(signal_bank, runtime_stats, model_loaded):
         )
 
         sample_length = int(signal_bank[selected_source_key()].shape[1])
-        controls = st.columns(3)
-        play_label = "Pause" if st.session_state.playback_running else "Play"
-        if controls[0].button(play_label, use_container_width=True):
+        if st.button("Play / Pause"):
             st.session_state.playback_running = not st.session_state.playback_running
-        if controls[1].button("Step", use_container_width=True):
+        if st.button("Step once"):
             step_once(sample_length)
-        if controls[2].button("Reset", use_container_width=True):
+        if st.button("Reset"):
             st.session_state.playback_cursor = 0
         st.checkbox("Loop playback", key="loop_playback")
-        st.caption("Step advances the cursor by one detector stride.")
 
-        st.subheader("Runtime")
-        st.write(f"Model file: `{runtime_stats['model_file']}`")
-        st.write(f"Window: `{WINDOW_SIZE}` samples")
-        st.write(f"Stride: `{WINDOW_STRIDE}` samples")
-        st.write(f"Sampling rate: `{SAMPLING_RATE_HZ}` Hz")
-        st.write(
-            "Model size: "
-            + (
-                "`-`"
-                if runtime_stats["model_size_kb"] is None
-                else f"`{runtime_stats['model_size_kb']:.1f} KB`"
-            )
-        )
-        st.write(
-            "Single-window ONNX time: "
-            + (
-                "`-`"
-                if runtime_stats["single_window_ms"] is None
-                else f"`{runtime_stats['single_window_ms']:.4f} ms`"
-            )
-        )
-
-        notes = [
-            "- Replays stored samples from `data/synthetic/`",
-            "- Marks the injected event start saved with the synthetic signal",
-        ]
-        if model_loaded:
-            notes.append(
-                "- Resamples each 50-point dashboard window to 500 points before ONNX inference"
-            )
-        else:
-            notes.append("- Falls back to heuristic-only scoring if no ONNX model is available")
-
-        st.subheader("Notes")
-        st.markdown("\n".join(notes))
-
-
-def render_summary(source_key, cursor, decision_score, model_score, event_start, model_loaded):
-    """Render the summary metrics row."""
-    cols = st.columns(6)
-    cols[0].metric("Signal", "event" if source_key == "event" else "normal")
-    cols[1].metric("Sample", str(st.session_state.sample_number))
-    cols[2].metric("Cursor", f"{cursor / SAMPLING_RATE_HZ:.2f}s")
-    cols[3].metric("Decision score", f"{decision_score:.2f}")
-    cols[4].metric("ONNX p(event)", "-" if not model_loaded else f"{model_score:.2f}")
-    cols[5].metric(
-        "Event start",
-        "-" if event_start is None else f"{event_start / SAMPLING_RATE_HZ:.2f}s",
-    )
-
-
-def render_status_panel(active_alert, detections, cursor, event_start):
-    """Render the current status and the recent detection log."""
-    with st.container(border=True):
-        st.subheader("Current window")
-        if active_alert is None:
-            st.info("No detection region is active at the current cursor.")
-            offset_copy = "-"
-        else:
-            st.warning(
-                f"Detection from {active_alert['start'] / SAMPLING_RATE_HZ:.3f}s "
-                f"to {active_alert['end'] / SAMPLING_RATE_HZ:.3f}s "
-                f"| score {active_alert['confidence']:.2f}"
-            )
-            offset_copy = format_event_offset(
-                compute_event_offset_ms(active_alert, event_start)
-            )
-
-        metric_cols = st.columns(3)
-        metric_cols[0].metric(
-            "Detections seen",
-            str(len([d for d in detections if d["start"] <= cursor])),
-        )
-        metric_cols[1].metric("Event offset", offset_copy)
-        metric_cols[2].metric("Threshold", f"{st.session_state.decision_threshold:.2f}")
-
-    with st.container(border=True):
-        st.subheader("Detection log")
-        entries = format_log_entries(detections, cursor, event_start)
-        if not entries:
-            st.caption("No detection has started before the current cursor.")
-        else:
-            for entry in entries:
-                st.write(entry)
-
-    with st.container(border=True):
-        st.subheader("Notes")
-        st.markdown(
-            "- Highlighted regions are merged windows above the current threshold\n"
-            "- The event marker is the stored synthetic event start, not an estimated peak\n"
-            "- The dashboard is for review of saved samples, not for field validation"
-        )
+        st.header("Runtime info")
+        st.write(f"Model file: {runtime_stats['model_file']}")
+        st.write(f"Window size: {WINDOW_SIZE}")
+        st.write(f"Stride: {WINDOW_STRIDE}")
+        st.write(f"Sampling rate: {SAMPLING_RATE_HZ} Hz")
+        if runtime_stats["model_size_kb"] is not None:
+            st.write(f"Model size: {runtime_stats['model_size_kb']:.1f} KB")
+        if runtime_stats["single_window_ms"] is not None:
+            st.write(f"ONNX time per window: {runtime_stats['single_window_ms']:.4f} ms")
 
 
 def main():
-    """Run the Streamlit dashboard."""
+    """Run the Streamlit app."""
     configure_page()
     initialize_state()
 
-    try:
-        signal_bank = load_signal_bank()
-        session, model_path = load_edge_runtime()
-    except FileNotFoundError as exc:
-        st.error(str(exc))
-        st.stop()
-
+    signal_bank = load_signal_bank()
+    session, model_path = load_edge_runtime()
     model_loaded = session is not None and model_path is not None
     runtime_stats = measure_edge_runtime(None if model_path is None else str(model_path))
-    render_sidebar(signal_bank, runtime_stats, model_loaded)
+
+    render_sidebar(signal_bank, runtime_stats)
 
     signal, event_start, source_key = get_selected_signal(signal_bank)
     signal_token = f"{source_key}:{st.session_state.sample_number}"
@@ -778,54 +540,64 @@ def main():
     alert_score = get_current_window_score(analysis["centers"], alert_scores, cursor)
     active_alert = get_active_alert(detections, cursor)
 
-    render_header(model_loaded)
-    render_summary(
-        source_key,
+    st.title(APP_TITLE)
+    st.write("Simple viewer for saved vibration samples.")
+
+    if not model_loaded:
+        st.warning("ONNX model not found. Showing heuristic score only.")
+
+    st.write(f"Signal type: {source_key}")
+    st.write(f"Sample number: {st.session_state.sample_number}")
+    st.write(f"Cursor: {cursor / SAMPLING_RATE_HZ:.2f}s")
+    st.write(f"Decision score: {alert_score:.2f}")
+    if model_loaded:
+        st.write(f"ONNX score: {model_score:.2f}")
+    if event_start is not None:
+        st.write(f"Injected event start: {event_start / SAMPLING_RATE_HZ:.2f}s")
+
+    if active_alert is None:
+        st.write("Active detection: none")
+    else:
+        st.write(
+            "Active detection: "
+            f"{active_alert['start'] / SAMPLING_RATE_HZ:.3f}s to "
+            f"{active_alert['end'] / SAMPLING_RATE_HZ:.3f}s"
+        )
+        st.write(
+            "Event offset: "
+            f"{format_event_offset(compute_event_offset_ms(active_alert, event_start))}"
+        )
+
+    st.subheader("Signal chart")
+    signal_fig = create_signal_chart(
+        analysis["signal"],
+        start_idx,
+        end_idx,
         cursor,
-        alert_score,
-        model_score,
+        detections,
+        event_start,
+    )
+    st.plotly_chart(signal_fig, use_container_width=True)
+
+    st.subheader("Score chart")
+    score_fig = create_score_chart(
+        analysis,
+        start_idx,
+        end_idx,
+        cursor,
+        alert_scores,
+        st.session_state.decision_threshold,
         event_start,
         model_loaded,
     )
+    st.plotly_chart(score_fig, use_container_width=True)
 
-    content_left, content_right = st.columns([1.65, 0.95], gap="large")
-
-    with content_left:
-        with st.container(border=True):
-            st.subheader("Signal trace")
-            st.caption(
-                "Shaded regions are detections. The dotted line marks the injected event start and the dashed line marks the cursor."
-            )
-            signal_fig = create_signal_chart(
-                analysis["signal"],
-                start_idx,
-                end_idx,
-                cursor,
-                detections,
-                event_start,
-            )
-            st.plotly_chart(signal_fig, use_container_width=True)
-
-        with st.container(border=True):
-            st.subheader("Score trace")
-            st.caption(
-                "The green trace is the score used for thresholding. The ONNX probability is shown for comparison when the model is available."
-            )
-            score_fig = create_score_chart(
-                analysis,
-                start_idx,
-                end_idx,
-                cursor,
-                alert_scores,
-                st.session_state.decision_threshold,
-                event_start,
-                st.session_state.score_mode,
-                model_loaded,
-            )
-            st.plotly_chart(score_fig, use_container_width=True)
-
-    with content_right:
-        render_status_panel(active_alert, detections, cursor, event_start)
+    st.subheader("Detections so far")
+    rows = build_detection_rows(detections, cursor, event_start)
+    if rows:
+        st.write(rows)
+    else:
+        st.write("No detections yet.")
 
     if st.session_state.playback_running:
         time.sleep(REFRESH_INTERVAL_SEC)
