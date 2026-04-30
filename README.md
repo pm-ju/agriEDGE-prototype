@@ -1,92 +1,66 @@
-# 🚜 AgriEdge-Detect
+# agriEDGE prototype
 
-**Real-Time Foreign Object Detection for Agricultural Machinery**
+A Streamlit prototype for reviewing sliding-window event detection on synthetic harvester vibration data.
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)]()
-[![sktime](https://img.shields.io/badge/sktime-latest-green.svg)]()
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)]()
-[![ONNX](https://img.shields.io/badge/ONNX-Runtime-purple.svg)]()
+Live app: https://agri-edge.streamlit.app/
 
-A prototype demonstrating embedded AI for predictive sensor systems in
-Agriculture 4.0. Built as part of an application to the
-[European Summer of Code 2026](https://github.com/european-summer-of-code/esoc2026)
-project on foreign object detection for agricultural machinery.
+## Features
 
-## 🎯 What It Does
+- Replay stored normal and injected-event signals
+- Score fixed windows with a simple heuristic and an exported ONNX model
+- Merge windows above a threshold into detection regions
+- Inspect the signal trace, score trace, and recent detections in one dashboard
+- Keep the training and export workflow in notebooks for easy iteration
 
-When a forage harvester processes crops, foreign objects (rocks, metal, wood)
-can enter the crop flow and damage the chopper drum blades. This system:
+## Stack
 
-1. **Monitors** continuous vibration sensor data at 1kHz (millisecond granularity)
-2. **Detects** foreign object impact events using a trained MLP neural network
-3. **Alerts** the operator in real-time with advance warning (avg 45ms before impact peak)
-4. **Runs at the edge** — model exported to ONNX + INT8 quantization for embedded ECU deployment
+- Python
+- Streamlit
+- sktime
+- PyTorch
+- ONNX Runtime
+- NumPy
+- Plotly
 
-## 🏗 Architecture
+## Run Locally
 
-```
-Vibration Sensor (1kHz)
-    ↓
-Sliding Window Segmentation (50ms windows, 10ms stride)
-    ↓
-sktime MLPClassifierTorch (trained on FordA proxy dataset)
-    ↓
-Detection Threshold (P > 0.5 → ALERT)
-    ↓
-Event Merging + Advance Detection Time Calculation
-    ↓
-Real-Time Dashboard Alert + Blade Brake Trigger
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run dashboard/app.py
 ```
 
-## 🚀 Quick Start
+If you want to regenerate the synthetic samples:
 
-    # Clone and install
-    git clone https://github.com/pm-ju/agriedge-detect.git
-    cd agriedge-detect
-    pip install -r requirements.txt
+```bash
+python data/synthetic/generate_synthetic.py
+```
 
-    # Generate synthetic data
-    python data/synthetic/generate_synthetic.py
+If the ONNX model is missing, export it from the notebook:
 
-    # Train models (run the notebook or):
-    python -c "from src.models.sktime_classifiers import build_mlp_classifier; ..."
+```bash
+jupyter notebook notebooks/05_edge_export.ipynb
+```
 
-    # Launch the dashboard
-    streamlit run dashboard/app.py
+## Project Structure
 
-## 📊 Results
+- `dashboard/` Streamlit review app
+- `src/` model builders, detector logic, evaluation helpers, and ONNX export
+- `data/synthetic/` stored synthetic signals and the generator script
+- `models/` exported model artifacts used by the dashboard
+- `notebooks/` exploration, training, evaluation, explainability, and export
 
-| Model | TPR | FPR | AUC | Avg ADT | Latency | Size |
-|-------|-----|-----|-----|---------|---------|------|
-| MLP (PyTorch FP32) | 96.2% | 2.1% | 0.987 | 45ms | 1.2ms | 512KB |
-| MLP (ONNX FP32) | 96.2% | 2.1% | 0.987 | 45ms | 0.5ms | 210KB |
-| MLP (ONNX INT8) | 95.8% | 2.3% | 0.984 | 43ms | 0.3ms | 48KB |
-| TSF Baseline | 91.4% | 4.7% | 0.962 | — | 8.1ms | 15MB |
+## Notes
 
-*Results on FordA test set. ADT measured on synthetic agricultural data.*
+- This is a prototype, not a production detector.
+- The classifier is trained on FordA as proxy data, not on field recordings from a harvester.
+- The dashboard replays stored 10 second samples; it is not connected to a live sensor feed.
+- The event marker shown in the dashboard is the injected event start saved with the synthetic sample.
 
-## 📁 Project Structure
+## Future Work
 
-- `src/` — Core ML pipeline (data loading, models, evaluation, edge export)
-- `notebooks/` — Jupyter notebooks for exploration, training, evaluation
-- `dashboard/` — Streamlit real-time visualization
-- `data/` — Raw + synthetic datasets
-- `models/` — Saved trained models (.pt, .onnx)
-- `results/` — Figures and evaluation reports
-
-## 🔬 Relevance to ESoC Project
-
-This prototype directly demonstrates capabilities required by the project:
-
-| ESoC Requirement | Prototype Demonstration |
-|---|---|
-| Build performant event detection algorithms | MLP + TSF classifiers with 96%+ TPR |
-| Feature extraction & preprocessing pipeline | Sliding window + z-score normalization |
-| Performance metrics (TPR, FPR, ADT) | Full evaluation suite with all three metrics |
-| sktime model building workflow | End-to-end pipeline using sktime estimators |
-| Embedded constraints (stretch) | ONNX export + INT8 quantization (0.3ms, 48KB) |
-| Explainability (stretch) | Occlusion-based temporal importance analysis |
-
-## 📄 License
-
-Apache 2.0
+- Train on field data instead of the FordA proxy dataset
+- Connect the dashboard to the chunked stream detector path
+- Add tests around window scoring and event merging
+- Compare the batch dashboard path with the stateful stream API

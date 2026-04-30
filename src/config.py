@@ -1,8 +1,4 @@
-"""Central configuration for AgriEdge-Detect.
-
-All hyperparameters, paths, and constants live here.
-Every other file imports from this module — never hardcodes values.
-"""
+"""Project paths and constants."""
 
 from pathlib import Path
 

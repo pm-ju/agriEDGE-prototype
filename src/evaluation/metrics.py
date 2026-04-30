@@ -1,14 +1,4 @@
-"""Agricultural detection metrics: TPR, FPR, and Advance Detection Time.
-
-These metrics are SPECIFICALLY mentioned in the ESoC project description:
-"implement transparent performance measures to ensure the quality of the
-developed approaches, in terms of TPR, FPR, and advance detection time"
-
-Advance Detection Time (ADT) is unique to this domain:
-  How many milliseconds BEFORE the actual foreign object impact peak
-  does the system trigger the alarm? Earlier = better = more time to
-  stop the blades and prevent damage.
-"""
+"""Metrics used in the training and evaluation notebooks."""
 
 import numpy as np
 from sklearn.metrics import (

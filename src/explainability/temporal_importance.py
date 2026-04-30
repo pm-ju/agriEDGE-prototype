@@ -1,17 +1,4 @@
-"""Temporal importance analysis for detection explainability.
-
-Answers the question: "Which part of the sensor signal was most important
-for triggering the foreign object detection?"
-
-This directly addresses the ESoC stretch goal:
-"apply explainable AI or root cause analysis techniques to the pipeline,
-e.g., detecting which sensors or which part of the event was relevant
-for the detection"
-
-Method: Occlusion-based temporal importance.
-For each time window, replace it with zeros (or mean) and measure how much
-the detection probability drops. Higher drop = more important region.
-"""
+"""Temporal importance analysis based on simple occlusion tests."""
 
 import numpy as np
 

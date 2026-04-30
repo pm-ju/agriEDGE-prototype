@@ -1,16 +1,4 @@
-"""Dataset loading and preprocessing for AgriEdge-Detect.
-
-This module handles:
-1. Loading the FordA dataset from sktime (proxy for vibration sensor data)
-2. Converting class labels from {-1, 1} to {0, 1} for PyTorch compatibility
-3. Applying standard normalization (z-score per-instance)
-4. Providing train/test splits ready for sktime estimators
-
-The FordA dataset is a univariate time series classification problem:
-- Each sample has 500 time steps of engine/vibration sensor readings
-- Binary classification: normal operation vs. anomalous event
-- We treat this as: normal crop flow (-1 → 0) vs foreign object impact (1 → 1)
-"""
+"""Load FordA and map it to the project input format."""
 
 import os
 import tempfile

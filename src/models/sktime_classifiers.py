@@ -103,8 +103,6 @@ class MLPClassifierTorch(BaseDeepClassifierPytorch):
     """Project-local PyTorch MLP compatible with current sktime releases."""
 
     _tags = {
-        "authors": ["OpenAI"],
-        "maintainers": ["OpenAI"],
         "python_dependencies": "torch",
         "property:randomness": "stochastic",
         "capability:random_state": True,

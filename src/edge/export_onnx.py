@@ -1,13 +1,4 @@
-"""Export trained sktime PyTorch models to ONNX for embedded deployment.
-
-This module handles the critical "edge AI" aspect:
-- Extract the underlying torch.nn.Module from the sktime estimator
-- Export it to ONNX format (industry standard for embedded inference)
-- Apply dynamic quantization (INT8) to reduce model size and latency
-- Benchmark inference time comparing PyTorch vs ONNX vs Quantized ONNX
-
-This proves the model can run on an agricultural ECU or embedded Jetson device.
-"""
+"""Export a fitted project model to ONNX and benchmark the result."""
 
 import os
 import tempfile

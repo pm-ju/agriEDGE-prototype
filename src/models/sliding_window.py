@@ -1,17 +1,4 @@
-"""Sliding window event detector.
-
-Converts a per-window classifier into a continuous-time event detector.
-This is the core of the "real-time detection" capability:
-
-1. Take a continuous sensor stream
-2. Extract overlapping windows of fixed size
-3. Classify each window using the trained sktime model
-4. Apply a detection threshold to get binary alerts
-5. Merge adjacent detections into event regions
-6. Calculate "advance detection time" — how early before the peak we detected
-
-This simulates exactly what would run on the embedded agricultural ECU.
-"""
+"""Sliding-window detector built around a per-window classifier."""
 
 import numpy as np
 from sktime.detection.base import BaseDetector
