@@ -2,7 +2,7 @@
 
 A Streamlit prototype for reviewing sliding-window event detection on synthetic harvester vibration data.
 
-Live app: https://agri-edge.streamlit.app/
+Live app: https://esoc-prototype.streamlit.app/
 
 ## Features
 
